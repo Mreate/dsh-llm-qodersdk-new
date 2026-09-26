@@ -3,4 +3,4 @@
 # may address this row by id.
 - insert:
     - id: llm-qoder
-      name: '@jiamingzang/dsh-llm-qoder'
+      name: '@mreate/dsh-llm-qoder'

@@ -10,7 +10,7 @@
  * Configuration rides the profile entry's own `Config` schema: the settings
  * service projects it for the entry id, so this plugin needs no settings
  * namespace registration of its own.
- * @module @jiamingzang/dsh-llm-qoder
+ * @module @mreate/dsh-llm-qoder
  */
 import type { Context } from '@deepseek-ai/cordis';
 import z from '@deepseek-ai/schemastery';

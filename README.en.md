@@ -2,7 +2,7 @@
 
 > **中文** | [English](README.en.md)
 
-An adapter plugin (`@jiamingzang/dsh-llm-qoder`) that routes DeepSeek Harness's LLM seam (`ctx.llm`) to the local **Qoder CLI**, built on [`@qoder-ai/qoder-agent-sdk`](https://www.npmjs.com/package/@qoder-ai/qoder-agent-sdk).
+An adapter plugin (`@mreate/dsh-llm-qoder`) that routes DeepSeek Harness's LLM seam (`ctx.llm`) to the local **Qoder CLI**, built on [`@qoder-ai/qoder-agent-sdk`](https://www.npmjs.com/package/@qoder-ai/qoder-agent-sdk).
 
 It registers the `qoder` / `qoder-byok` provider routes so the harness's model requests reuse the local `qodercli` login state — **no credentials or settings required**. Both built-in models and account-custom models are fetched live from qodercli.
 
@@ -128,7 +128,7 @@ Prerequisites: a local `qodercli` binary with an active login (`qodercli --versi
 2. Add it to the target profile:
 
    ```sh
-   dsh plugin --profile <profile> add jiamingzang-dsh-llm-qoder-<version>.tgz
+   dsh plugin --profile <profile> add mreate-dsh-llm-qoder-<version>.tgz
    ```
 
 3. **First install requires approving a build script**: `@qoder-ai/qoder-agent-sdk` ships a postinstall (downloads the worker runtime), which pnpm 11+ blocks by default with `ERR_PNPM_IGNORED_BUILDS`. dsh writes the pending key into the profile's `pnpm-workspace.yaml` placeholder (`'@qoder-ai/qoder-agent-sdk': set this to true or false` under `allowBuilds`); set it to `true` and rerun the add command to finish — this is dsh's standard fail-loud flow for any dependency with postinstall scripts;
@@ -140,7 +140,7 @@ Without the plugin command, declare it directly in cordis.yml or a patch layer (
 
 ```yaml
 - id: llm-qoder
-  name: '@jiamingzang/dsh-llm-qoder'
+  name: '@mreate/dsh-llm-qoder'
 ```
 
 ### Usage & troubleshooting
@@ -199,7 +199,7 @@ So this package has **no** `prepare`; the build hangs off `prepack`, which runs 
 pnpm install     # dependencies only; does not build
 pnpm run build   # manual build: tsc emits lib/types/*.d.ts, tsdown bundles lib/index.js
 pnpm test        # vitest unit tests
-pnpm pack        # prepack builds first, then produces jiamingzang-dsh-llm-qoder-<version>.tgz
+pnpm pack        # prepack builds first, then produces mreate-dsh-llm-qoder-<version>.tgz
 pnpm publish     # prepack builds first
 ```
 

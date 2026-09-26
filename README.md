@@ -2,7 +2,7 @@
 
 > **中文** | [English](README.en.md)
 
-将 DeepSeek Harness 的 LLM 接缝（`ctx.llm`）路由到本机 **Qoder CLI** 的适配器插件（`@jiamingzang/dsh-llm-qoder`），基于 [`@qoder-ai/qoder-agent-sdk`](https://www.npmjs.com/package/@qoder-ai/qoder-agent-sdk)。
+将 DeepSeek Harness 的 LLM 接缝（`ctx.llm`）路由到本机 **Qoder CLI** 的适配器插件（`@mreate/dsh-llm-qoder`），基于 [`@qoder-ai/qoder-agent-sdk`](https://www.npmjs.com/package/@qoder-ai/qoder-agent-sdk)。
 
 它注册 `qoder` / `qoder-byok` 两个 provider 路由，让 harness 的模型请求复用本机 `qodercli` 的登录态——**无需任何凭据或设置项**。模型与账号自定义模型都从 qodercli 实时拉取。
 
@@ -124,11 +124,11 @@ function classifyTurnError(detail: string): string {
 
 ### 从发布包引入
 
-1. 获取插件包：本仓库 Releases 可能为空，直接在仓库根目录执行 `pnpm install && pnpm pack` 生成 `jiamingzang-dsh-llm-qoder-<version>.tgz`（`pnpm pack` 会先自动构建出 `lib/`）；
+1. 获取插件包：本仓库 Releases 可能为空，直接在仓库根目录执行 `pnpm install && pnpm pack` 生成 `mreate-dsh-llm-qoder-<version>.tgz`（`pnpm pack` 会先自动构建出 `lib/`）；
 2. 添加到目标 profile：
 
    ```sh
-   dsh plugin --profile <profile> add jiamingzang-dsh-llm-qoder-<version>.tgz
+   dsh plugin --profile <profile> add mreate-dsh-llm-qoder-<version>.tgz
    ```
 
 3. **首次安装需批准构建脚本**：`@qoder-ai/qoder-agent-sdk` 带 postinstall（下载 worker runtime），pnpm 11+ 默认拦截并报 `ERR_PNPM_IGNORED_BUILDS`。dsh 会把待批准 key 写入 profile 的 `pnpm-workspace.yaml` 占位（`allowBuilds` 下 `'@qoder-ai/qoder-agent-sdk': set this to true or false`），把值改为 `true` 后重跑上面的 add 命令即完成安装——这是 dsh 对任何带 postinstall 依赖的标准 fail-loud 流程；
@@ -140,7 +140,7 @@ function classifyTurnError(detail: string): string {
 
 ```yaml
 - id: llm-qoder
-  name: '@jiamingzang/dsh-llm-qoder'
+  name: '@mreate/dsh-llm-qoder'
 ```
 
 ### 使用与排障
@@ -199,7 +199,7 @@ warm 内层会话会累积整段宿主历史：首轮喂入全量历史（`rende
 pnpm install     # 只装依赖，不会构建
 pnpm run build   # 手动构建：tsc 产出 lib/types/*.d.ts，tsdown 产出 lib/index.js
 pnpm test        # vitest 单元测试
-pnpm pack        # prepack 自动先构建，再生成 jiamingzang-dsh-llm-qoder-<version>.tgz
+pnpm pack        # prepack 自动先构建，再生成 mreate-dsh-llm-qoder-<version>.tgz
 pnpm publish     # prepack 自动先构建
 ```
 
