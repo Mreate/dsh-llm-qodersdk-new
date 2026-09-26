@@ -189,15 +189,21 @@ Warm inner sessions accumulate the whole host history: the first turn feeds the 
 
 ## Development & Build
 
-This repo stores only source (`src/`) and tests (`tests/`); build artifacts `lib/` (`lib/index.js` + `lib/types/*.d.ts`) are gitignored and generated on demand. `prepare` / `prepublishOnly` run the same command as `build`: `pnpm pack` and `pnpm publish` build first, and pnpm also runs a **git dependency's own build script** while preparing it — which is what lets a `github:` install produce `lib/`. Note that `pnpm install` itself does not trigger `prepare` (measured on pnpm 11.7), so local development needs an explicit build.
+This repo **commits its build artifacts** `lib/` (`lib/index.js` + `lib/types/*.d.ts`); the sources are only `src/` and `tests/`.
+
+Why the artifacts are committed: while preparing a git dependency, pnpm gates on the presence of an **install-time** script such as `prepare` and then demands an `allowBuilds` entry from the consumer — and that entry must be keyed by `name@<resolved tarball URL>`, which carries the commit hash and therefore changes on every push. With the artifacts committed and no install-time script, a `github:` install needs no extra allowlisting at all (only the by-name build approval for `@qoder-ai/qoder-agent-sdk` remains).
+
+So this package has **no** `prepare`; the build hangs off `prepack`, which runs only for pack / publish:
 
 ```sh
 pnpm install     # dependencies only; does not build
-pnpm run build   # equivalent to pnpm run prepare: tsc emits lib/types/*.d.ts, tsdown bundles lib/index.js
+pnpm run build   # manual build: tsc emits lib/types/*.d.ts, tsdown bundles lib/index.js
 pnpm test        # vitest unit tests
-pnpm pack        # builds first, then produces jiamingzang-dsh-llm-qoder-<version>.tgz
-pnpm publish     # prepublishOnly builds first
+pnpm pack        # prepack builds first, then produces jiamingzang-dsh-llm-qoder-<version>.tgz
+pnpm publish     # prepack builds first
 ```
+
+> After changing `src/`, run `pnpm run build` and commit `lib/` too — otherwise a git install keeps serving the previous artifacts.
 
 The build config is in place (`tsconfig.json` + `tsdown.config.ts`); peer dependencies `@deepseek-ai/dsh-llm`, `@deepseek-ai/cordis`, and `@deepseek-ai/schemastery` stay external — the harness runtime supplies all three as shared packages, so they must not be installed into a profile.
 

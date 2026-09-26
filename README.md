@@ -189,15 +189,21 @@ warm 内层会话会累积整段宿主历史：首轮喂入全量历史（`rende
 
 ## 开发与构建
 
-本仓库只存源码（`src/`）与测试（`tests/`）；构建产物 `lib/`（`lib/index.js` + `lib/types/*.d.ts`）被 `.gitignore` 忽略，由构建脚本按需生成。`prepare` / `prepublishOnly` 与 `build` 是同一条命令：`pnpm pack`、`pnpm publish` 都会先构建，pnpm 在**从 git 地址安装依赖时也会运行该依赖自己的构建脚本**——这正是 `github:` 安装能拿到 `lib/` 的前提。注意 `pnpm install` 本身不触发 `prepare`（pnpm 11.7 实测），本地开发要显式构建。
+本仓库**提交构建产物** `lib/`（`lib/index.js` + `lib/types/*.d.ts`），源码只有 `src/` 与测试 `tests/`。
+
+为什么把产物入库：pnpm 在准备 git 依赖时，只要发现有 `prepare` 这类**安装期**脚本，就要求使用方在 `allowBuilds` 里放行，而该放行键是「包名@解析后的 tarball URL」，带 commit hash、每次推送都会变。产物入库 + 安装期无脚本之后，`github:` 安装不需要任何额外放行（只剩 `@qoder-ai/qoder-agent-sdk` 那条按包名的构建批准）。
+
+所以本包**没有** `prepare`，构建挂在 `prepack` 上（只在 pack / publish 时运行）：
 
 ```sh
 pnpm install     # 只装依赖，不会构建
-pnpm run build   # 与 pnpm run prepare 等价：tsc 产出 lib/types/*.d.ts，tsdown 产出 lib/index.js
+pnpm run build   # 手动构建：tsc 产出 lib/types/*.d.ts，tsdown 产出 lib/index.js
 pnpm test        # vitest 单元测试
-pnpm pack        # 自动先构建，再生成 jiamingzang-dsh-llm-qoder-<version>.tgz
-pnpm publish     # prepublishOnly 自动先构建
+pnpm pack        # prepack 自动先构建，再生成 jiamingzang-dsh-llm-qoder-<version>.tgz
+pnpm publish     # prepack 自动先构建
 ```
+
+> 改动 `src/` 后记得 `pnpm run build` 并把 `lib/` 一并提交，否则 git 安装拿到的是旧产物。
 
 构建配置已就位（`tsconfig.json` + `tsdown.config.ts`），peer 依赖 `@deepseek-ai/dsh-llm`、`@deepseek-ai/cordis`、`@deepseek-ai/schemastery` 保持 external——这三者由 harness 运行时的 shared package 提供，不会装进 profile。
 

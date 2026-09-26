@@ -1,7 +1,7 @@
 {
-  "name": "@jiamingzang/dsh-llm-qoder",
+  "name": "@mreate/dsh-llm-qoder",
   "description": "Qoder CLI (qoder-agent-sdk) adapter for the DeepSeek Harness LLM seam",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -24,8 +24,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsdown",
-    "prepare": "tsc -p tsconfig.json && tsdown",
-    "prepublishOnly": "tsc -p tsconfig.json && tsdown",
+    "prepack": "tsc -p tsconfig.json && tsdown",
     "test": "vitest run"
   },
   "license": "MIT",
