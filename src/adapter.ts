@@ -10,7 +10,7 @@
 
 import { LlmAdapter, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type {
-  GenerateOptions, LlmModelInfo, LlmModelReasoningInfo, LlmProviderInfo, LlmResolvedModelInfo, StreamChunk,
+  GenerateOptions, LlmModelInfo, LlmModelReasoningInfo, LlmProviderInfo, LlmResolvedModelInfo, RequestMessage, StreamChunk,
 } from '@deepseek-ai/dsh-llm'
 import {
   DEFAULT_CONTEXT_WINDOW, DEFAULT_MAX_TOKENS, QODER_MODELS, resolveQoderModelId,
@@ -141,17 +141,11 @@ export class QoderAdapter extends LlmAdapter {
           // model's CEILING (often 1M) while defaultContextWindow is the
           // effective per-session window (e.g. 200K); using the ceiling would
           // push the auto-compaction threshold far past what the provider
-          // accepts. Prefer the default window, keeping the ceiling visible
-          // through availableContextWindows.
+          // accepts. Prefer the default window; the seam's context shape
+          // carries the window alone.
           contextWindow: live.defaultContextWindow
             ?? live.maxInputTokens
             ?? DEFAULT_CONTEXT_WINDOW,
-          ...live.availableContextWindows !== undefined && live.availableContextWindows.length > 0
-            ? { availableContextWindows: live.availableContextWindows }
-            : {},
-          ...live.defaultContextWindow !== undefined
-            ? { defaultContextWindow: live.defaultContextWindow }
-            : {},
         },
         defaultMaxTokens: live.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
         ...reasoning === undefined ? {} : { reasoning },
@@ -182,9 +176,11 @@ export class QoderAdapter extends LlmAdapter {
       return
     }
     const sessionId = String(options.sessionId)
+    // `GenerateOptions` no longer carries a context window: the seam reads the
+    // route's capacity from `resolveModel().context` instead, so the only
+    // per-request policy left to forward is the reasoning effort.
     const policy = {
       ...options.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort },
-      ...options.contextWindow === undefined ? {} : { contextWindow: options.contextWindow },
     }
     let session = this.sessions.forSession(sessionId, model)
     if (session.fedMessages === undefined) {
@@ -246,7 +242,7 @@ interface ContinuationPlan {
  * turn). Tail tool-result messages were already resolved into parked handlers
  * and never feed; fresh user turns and mutated messages do.
  */
-export function planContinuation(previous: readonly import('@deepseek-ai/dsh-llm').Message[], current: readonly import('@deepseek-ai/dsh-llm').Message[]): ContinuationPlan {
+export function planContinuation(previous: readonly RequestMessage[], current: readonly RequestMessage[]): ContinuationPlan {
   if (current.length <= previous.length) return { feed: null, rebuild: true }
   const mutated: number[] = []
   for (let i = 0; i < previous.length; i++) {
@@ -254,7 +250,9 @@ export function planContinuation(previous: readonly import('@deepseek-ai/dsh-llm
   }
   if (mutated.includes(0) || mutated.length > 2) return { feed: null, rebuild: true }
   const tail = current.slice(previous.length)
-  const freshUser = tail.filter(m => m.role === 'user' && m.source.kind !== 'tool')
+  // Tool results are `tool`-role messages at this seam, so every `user`-role
+  // message in the tail is a genuine new host turn.
+  const freshUser = tail.filter(m => m.role === 'user')
   if (freshUser.length === 0 && mutated.length === 0) return { feed: null, rebuild: false }
   const parts: string[] = []
   for (const index of mutated) {

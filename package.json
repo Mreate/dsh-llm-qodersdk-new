@@ -1,7 +1,7 @@
 {
   "name": "@jiamingzang/dsh-llm-qoder",
   "description": "Qoder CLI (qoder-agent-sdk) adapter for the DeepSeek Harness LLM seam",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -24,7 +24,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsdown",
-    "prepublishOnly": "npm run build",
+    "prepare": "tsc -p tsconfig.json && tsdown",
+    "prepublishOnly": "tsc -p tsconfig.json && tsdown",
     "test": "vitest run"
   },
   "license": "MIT",
@@ -39,8 +40,7 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-llm": "^0.1.0-rc.5",
-    "@deepseek-ai/dsh-settings": "^0.1.0-rc.5",
+    "@deepseek-ai/dsh-llm": "^0.1.7-rc.2",
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "dependencies": {
@@ -48,18 +48,12 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-llm": "^0.1.0-rc.5",
-    "@deepseek-ai/dsh-settings": "^0.1.0-rc.5",
-    "@deepseek-ai/schemastery": "^3.18.1",
+    "@deepseek-ai/cordis": "^4.0.4",
+    "@deepseek-ai/dsh-llm": "0.1.7-rc.2",
+    "@deepseek-ai/schemastery": "^3.18.4",
     "@types/node": "^22.0.0",
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@qoder-ai/qoder-agent-sdk"
-    ]
   }
 }

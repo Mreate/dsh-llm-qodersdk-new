@@ -7,9 +7,14 @@
  * @module dsh-llm-qoder/render
  */
 
-import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, RequestMessage } from '@deepseek-ai/dsh-llm'
 
-/** Render one content-block list as plain text; non-text blocks get placeholders. */
+/**
+ * Render one content-block list as plain text; non-text blocks get
+ * placeholders. Tool results are no longer a block type at this seam — they
+ * arrive as `tool`-role messages and are rendered by {@link renderMessage} —
+ * so `tool-call` is the only tool vocabulary that appears here.
+ */
 export function renderBlocks(blocks: readonly ContentBlock[]): string {
   const parts: string[] = []
   for (const block of blocks) {
@@ -17,11 +22,8 @@ export function renderBlocks(blocks: readonly ContentBlock[]): string {
       case 'text': parts.push(block.text); break
       case 'reasoning': break
       case 'image': parts.push('[图片附件]'); break
+      case 'file': parts.push('[文件附件]'); break
       case 'tool-call': parts.push(`[调用了工具 ${block.name}(${block.arguments})]`); break
-      case 'tool-result': {
-        parts.push(`[工具结果 ${block.toolCallId}] ${renderBlocks(block.content)}`)
-        break
-      }
       default: parts.push(JSON.stringify(block))
     }
   }
@@ -29,12 +31,14 @@ export function renderBlocks(blocks: readonly ContentBlock[]): string {
 }
 
 /** Render one message with its role tag. */
-export function renderMessage(message: Message): string {
+export function renderMessage(message: RequestMessage): string {
   const text = renderBlocks(message.content)
   switch (message.role) {
     case 'system': return `[系统提示] ${text}`
+    case 'developer': return `[开发者] ${text}`
     case 'user': return `[用户] ${text}`
     case 'assistant': return `[助手] ${text}`
+    case 'tool': return `[工具结果] ${text}`
   }
 }
 
@@ -49,7 +53,7 @@ const BACKEND_ROLE = [
  * Compose the first feed for a fresh session: backend role, the host system
  * prompt, and the existing conversation as compact context.
  */
-export function renderInitialFeed(system: string | undefined, messages: readonly Message[]): string {
+export function renderInitialFeed(system: string | undefined, messages: readonly RequestMessage[]): string {
   const parts: string[] = [BACKEND_ROLE]
   if (system !== undefined && system.length > 0) {
     parts.push(`---- 宿主系统提示（作为你的行为准则） ----\n${system}`)
@@ -66,7 +70,7 @@ export function renderUserTurn(blocks: readonly ContentBlock[]): string {
 }
 
 /** Render an in-place-updated message (runtime-context snapshots and the like). */
-export function renderRefreshed(message: Message): string {
+export function renderRefreshed(message: RequestMessage): string {
   return `${renderMessage(message)}\n（宿主原位刷新了这条消息）`
 }
 

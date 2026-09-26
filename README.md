@@ -124,7 +124,7 @@ function classifyTurnError(detail: string): string {
 
 ### 从发布包引入
 
-1. 获取插件包：从本仓库 Releases 下载最新的 `jiamingzang-dsh-llm-qoder-<version>.tgz`（或在仓库根目录 `pnpm pack` 自行生成）；
+1. 获取插件包：本仓库 Releases 可能为空，直接在仓库根目录执行 `pnpm install && pnpm pack` 生成 `jiamingzang-dsh-llm-qoder-<version>.tgz`（`pnpm pack` 会先自动构建出 `lib/`）；
 2. 添加到目标 profile：
 
    ```sh
@@ -189,19 +189,19 @@ warm 内层会话会累积整段宿主历史：首轮喂入全量历史（`rende
 
 ## 开发与构建
 
-本仓库只存源码（`src/`）与测试（`tests/`）；构建产物 `lib/`（`lib/index.js` + `lib/types/*.d.ts`）被 `.gitignore` 忽略，由构建脚本按需生成。
+本仓库只存源码（`src/`）与测试（`tests/`）；构建产物 `lib/`（`lib/index.js` + `lib/types/*.d.ts`）被 `.gitignore` 忽略，由构建脚本按需生成。`prepare` / `prepublishOnly` 与 `build` 是同一条命令：`pnpm pack`、`pnpm publish` 都会先构建，pnpm 在**从 git 地址安装依赖时也会运行该依赖自己的构建脚本**——这正是 `github:` 安装能拿到 `lib/` 的前提。注意 `pnpm install` 本身不触发 `prepare`（pnpm 11.7 实测），本地开发要显式构建。
 
 ```sh
-pnpm install
+pnpm install     # 只装依赖，不会构建
+pnpm run build   # 与 pnpm run prepare 等价：tsc 产出 lib/types/*.d.ts，tsdown 产出 lib/index.js
 pnpm test        # vitest 单元测试
-pnpm run build   # tsc 产出 lib/types/*.d.ts，tsdown 产出 lib/index.js
-pnpm pack        # 生成 jiamingzang-dsh-llm-qoder-<version>.tgz
+pnpm pack        # 自动先构建，再生成 jiamingzang-dsh-llm-qoder-<version>.tgz
 pnpm publish     # prepublishOnly 自动先构建
 ```
 
-构建配置已就位（`tsconfig.json` + `tsdown.config.ts`），peer 依赖 `@deepseek-ai/dsh-llm` 和 `@deepseek-ai/cordis` 保持 external。
+构建配置已就位（`tsconfig.json` + `tsdown.config.ts`），peer 依赖 `@deepseek-ai/dsh-llm`、`@deepseek-ai/cordis`、`@deepseek-ai/schemastery` 保持 external——这三者由 harness 运行时的 shared package 提供，不会装进 profile。
 
-> **版本说明**：peer 依赖 `@deepseek-ai/dsh-llm@^0.1.0-rc.5` 已可从公共 npm 解析（当前最新为 `0.1.0-rc.6`），本仓库可直接 `pnpm install && pnpm run build`。若需与 DeepSeek Harness 主仓库内的本地版本（`0.1.0-rc.5`）完全对齐，可在主仓库 `plugins/llm-qoder/` 目录内构建（由仓库根 `tsc` + `tsdown` 产出 `lib/`）。
+> **版本说明**：插件面向 DeepSeek Harness **0.1.7-rc.2**（desktop profile 的当前运行时）。peer 范围为 `@deepseek-ai/dsh-llm@^0.1.7-rc.2`，编译对齐运行时 sharedPackages 的 `@deepseek-ai/cordis@4.0.4` + `@deepseek-ai/schemastery@3.18.4`。0.1.7 的 settings seam 已改为「按 profile entry id 投影插件 Config 表单」，插件不再注册 settings 命名空间，也不再依赖 `@deepseek-ai/dsh-settings`。
 
 ## License
 

@@ -2,7 +2,7 @@
  * Feed rendering: block, message, and feed composition pure functions.
  */
 import { describe, expect, it } from 'vitest'
-import { CallId, MessageId } from '@deepseek-ai/dsh-llm/brand'
+import { MessageId, ToolCallId } from '@deepseek-ai/dsh-llm/brand'
 import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
 import {
   renderBlocks, renderIdentityAppend, renderInitialFeed, renderMessage, renderRefreshed,
@@ -37,13 +37,18 @@ describe('renderBlocks', () => {
   })
 
   it('renders tool calls as placeholders', () => {
-    expect(renderBlocks([{ type: 'tool-call', id: CallId('c1'), name: 'read', arguments: '{"path":"a"}' }]))
+    expect(renderBlocks([{ type: 'tool-call', id: ToolCallId('c1'), name: 'read', arguments: '{"path":"a"}' }]))
       .toBe('[调用了工具 read({"path":"a"})]')
   })
 
-  it('renders tool results recursively', () => {
-    expect(renderBlocks([{ type: 'tool-result', toolCallId: CallId('c1'), content: [text('ok')] }]))
-      .toBe('[工具结果 c1] ok')
+  it('renders tool results as tool-role messages', () => {
+    expect(renderMessage({
+      id: MessageId('m2'),
+      role: 'tool',
+      source: { kind: 'tool', callId: ToolCallId('c1') },
+      toolCallId: ToolCallId('c1'),
+      content: [text('ok')],
+    })).toBe('[工具结果] ok')
   })
 
   it('serializes unknown blocks as JSON', () => {
@@ -53,7 +58,7 @@ describe('renderBlocks', () => {
 
 describe('renderMessage', () => {
   it('tags system, user, and assistant roles', () => {
-    const system = userMessage([text('s')], { role: 'system', source: { kind: 'plugin', plugin: 'test' } })
+    const system = userMessage([text('s')], { role: 'system', source: { kind: 'system-prompt' } })
     const assistant = userMessage([text('a')], {
       role: 'assistant',
       source: { kind: 'model', provider: 'qoder', model: 'dmodel' },

@@ -9,11 +9,11 @@
  */
 
 import {
-  CallId, CONTEXT_WINDOW_EXCEEDED_CODE, EMPTY_RESPONSE_CODE, LlmError, QUOTA_EXCEEDED_CODE,
+  CONTEXT_WINDOW_EXCEEDED_CODE, EMPTY_RESPONSE_CODE, LlmError, QUOTA_EXCEEDED_CODE, ToolCallId,
   isContextWindowExceededError, isQuotaExceededError,
 } from '@deepseek-ai/dsh-llm'
 import type {
-  ContentBlock, FinishReason, GenerateOptions, Message, StreamChunk, ToolSchema, TokenUsage,
+  ContentBlock, FinishReason, GenerateOptions, RequestMessage, StreamChunk, ToolSchema, TokenUsage,
 } from '@deepseek-ai/dsh-llm'
 import { createSdkMcpServer, qodercliAuth, query } from '@qoder-ai/qoder-agent-sdk'
 import type { CanUseTool, Query } from '@qoder-ai/qoder-agent-sdk'
@@ -203,7 +203,7 @@ export class QoderSession {
   private abortPending = false
   private disposed = false
   /** Previous request's messages for delta feeding. */
-  fedMessages: readonly Message[] | undefined
+  fedMessages: readonly RequestMessage[] | undefined
   fedSystem: string | undefined
   /** This turn's fed characters, reset per turn for per-call token accounting. */
   turnInputChars = 0
@@ -362,18 +362,18 @@ export class QoderSession {
   }
 
   /** Deliver host tool results to parked/buffered handlers, keyed by callId. */
-  deliverToolResults(tail: readonly Message[]): void {
+  deliverToolResults(tail: readonly RequestMessage[]): void {
     let freshUserTurn = false
     for (const message of tail) {
-      if (message.role === 'user' && message.source.kind !== 'tool') {
+      if (message.role === 'user') {
         freshUserTurn = true
         continue
       }
-      if (message.role !== 'user' || message.source.kind !== 'tool') continue
-      const block = message.content[0]
-      if (block === undefined || block.type !== 'tool-result') continue
-      const callId = String(block.toolCallId)
-      const payload = { text: renderResultText(block.content), isError: block.isError === true }
+      // Tool results are their own message role at this seam: the call id and
+      // the error flag live on the message, not on a content block.
+      if (message.role !== 'tool') continue
+      const callId = String(message.toolCallId)
+      const payload = { text: renderResultText(message.content), isError: message.isError === true }
       // Key by the qodercli tool-use id the host callId maps to; without a
       // mapping (a call the host never surfaced) fall back to the callId so
       // the entry still buffers for any handler that parked under it.
@@ -509,7 +509,7 @@ export class QoderSession {
    * @param system - the host system prompt included in this request.
    * @param messages - the full host message list included in this request.
    */
-  recordRequestInput(system: string | undefined, messages: readonly Message[]): void {
+  recordRequestInput(system: string | undefined, messages: readonly RequestMessage[]): void {
     const rendered = renderInitialFeed(system, messages)
     this.estimatedInputTokens = Math.max(1, Math.ceil(rendered.length / 4))
   }
@@ -577,7 +577,7 @@ export class QoderSession {
             this.emit({
               type: 'tool-call-delta',
               index: chunkIndex,
-              id: CallId(callId),
+              id: ToolCallId(callId),
               name: this.openTool.name,
               argumentsDelta: '',
             })
@@ -608,7 +608,7 @@ export class QoderSession {
             this.emit({
               type: 'tool-call-delta',
               index: this.openTool.chunkIndex,
-              id: CallId(this.openTool.callId),
+              id: ToolCallId(this.openTool.callId),
               argumentsDelta: delta.partial_json,
             })
           }
@@ -621,7 +621,7 @@ export class QoderSession {
               index: this.openTool.chunkIndex,
               block: {
                 type: 'tool-call',
-                id: CallId(this.openTool.callId),
+                id: ToolCallId(this.openTool.callId),
                 name: this.openTool.name,
                 arguments: this.openTool.arguments,
               },

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   CONTEXT_WINDOW_EXCEEDED_CODE, EMPTY_RESPONSE_CODE, QUOTA_EXCEEDED_CODE,
 } from '@deepseek-ai/dsh-llm'
-import { CallId, MessageId } from '@deepseek-ai/dsh-llm/brand'
+import { MessageId, ToolCallId } from '@deepseek-ai/dsh-llm/brand'
 import type { ContentBlock, GenerateOptions, Message, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { renderInitialFeed } from '../src/render.ts'
 import {
@@ -137,9 +137,10 @@ function resultFrame(subtype: string | undefined, extra: Record<string, unknown>
 function toolResultMessage(callId: string, text: string): Message {
   return {
     id: MessageId('m1'),
-    role: 'user',
-    source: { kind: 'tool', callId: CallId(callId) },
-    content: [{ type: 'tool-result', toolCallId: CallId(callId), content: [{ type: 'text', text }] }],
+    role: 'tool',
+    source: { kind: 'tool', callId: ToolCallId(callId) },
+    toolCallId: ToolCallId(callId),
+    content: [{ type: 'text', text }],
   }
 }
 
@@ -300,12 +301,12 @@ describe('QoderSession.stream synthesis', () => {
     q.push(resultFrame('success'))
     const chunks = await pending
     expect(chunks[0]).toEqual({ type: 'block-start', index: 0, blockType: 'tool-call' })
-    expect(chunks[1]).toMatchObject({ type: 'tool-call-delta', id: CallId('qoder-1'), name: 'read_file', argumentsDelta: '' })
+    expect(chunks[1]).toMatchObject({ type: 'tool-call-delta', id: ToolCallId('qoder-1'), name: 'read_file', argumentsDelta: '' })
     expect(chunks[2]).toMatchObject({ type: 'tool-call-delta', argumentsDelta: '{"path":"/x"}' })
     expect(chunks[3]).toEqual({
       type: 'block-end',
       index: 0,
-      block: { type: 'tool-call', id: CallId('qoder-1'), name: 'read_file', arguments: '{"path":"/x"}' },
+      block: { type: 'tool-call', id: ToolCallId('qoder-1'), name: 'read_file', arguments: '{"path":"/x"}' },
     })
     expect(chunks.at(-1)).toEqual({ type: 'finish', reason: { kind: 'tool-calls' } })
   })
@@ -322,7 +323,7 @@ describe('QoderSession.stream synthesis', () => {
     expect(ended).toEqual({
       type: 'block-end',
       index: 0,
-      block: { type: 'tool-call', id: CallId('qoder-1'), name: 'read_file', arguments: '{"path":"/x"}' },
+      block: { type: 'tool-call', id: ToolCallId('qoder-1'), name: 'read_file', arguments: '{"path":"/x"}' },
     })
   })
 

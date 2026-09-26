@@ -6,12 +6,15 @@
  * and its custom models (`qoder-byok`), every model is addressable by its SDK
  * value (plus the two `deepseek-v4-*` aliases), and warm inner sessions close
  * with the plugin.
+ *
+ * Configuration rides the profile entry's own `Config` schema: the settings
+ * service projects it for the entry id, so this plugin needs no settings
+ * namespace registration of its own.
  * @module @jiamingzang/dsh-llm-qoder
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { QoderAdapter, QODER_BYOK_PROVIDER, QODER_PROVIDER } from './adapter.ts'
 
 export { QoderAdapter, QODER_PROVIDER, QODER_BYOK_PROVIDER } from './adapter.ts'
@@ -22,7 +25,12 @@ export { QoderModelCatalog } from './models.ts'
 export const name = 'llm-qoder'
 export const inject = ['llm']
 
-const NS = settingsNamespace('llm-qoder')
+/**
+ * Directory namespace shared by both routes. It is the profile entry id this
+ * plugin is mounted under (`llm-qoder` in `cordis.patch.yml`), which is the
+ * key configuration surfaces address; the seam types it as a plain string.
+ */
+const NS = 'llm-qoder'
 
 /** Plugin config; the adapter works entirely off local qodercli auth. */
 export interface Config {
@@ -50,7 +58,6 @@ export function apply(ctx: Context, config: Config): void {
     { provider: QODER_PROVIDER, displayName: 'Qoder CLI', settingsNs: NS, settingsPath: [] },
     { provider: QODER_BYOK_PROVIDER, displayName: 'Qoder 自定义', settingsNs: NS, settingsPath: [] },
   ])
-  installSettingsSection(ctx, NS, Config, config, { setSource: () => {}, onChange: () => {} })
   // registerAdapter's disposer only withdraws the routes; the warm qodercli
   // subprocesses are owned by the adapter and must close with the plugin.
   ctx.effect(() => () => adapter.close(), 'llm-qoder.sessions')

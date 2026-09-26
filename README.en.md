@@ -124,7 +124,7 @@ Prerequisites: a local `qodercli` binary with an active login (`qodercli --versi
 
 ### From the release tarball
 
-1. Get the package: download the latest `jiamingzang-dsh-llm-qoder-<version>.tgz` from this repository's Releases (or produce it yourself with `pnpm pack` in the repo root);
+1. Get the package: this repository's Releases may be empty, so build it locally with `pnpm install && pnpm pack` in the repo root (`pnpm pack` builds `lib/` first);
 2. Add it to the target profile:
 
    ```sh
@@ -189,19 +189,19 @@ Warm inner sessions accumulate the whole host history: the first turn feeds the 
 
 ## Development & Build
 
-This repo stores only source (`src/`) and tests (`tests/`); build artifacts `lib/` (`lib/index.js` + `lib/types/*.d.ts`) are gitignored and generated on demand by the build script.
+This repo stores only source (`src/`) and tests (`tests/`); build artifacts `lib/` (`lib/index.js` + `lib/types/*.d.ts`) are gitignored and generated on demand. `prepare` / `prepublishOnly` run the same command as `build`: `pnpm pack` and `pnpm publish` build first, and pnpm also runs a **git dependency's own build script** while preparing it — which is what lets a `github:` install produce `lib/`. Note that `pnpm install` itself does not trigger `prepare` (measured on pnpm 11.7), so local development needs an explicit build.
 
 ```sh
-pnpm install
+pnpm install     # dependencies only; does not build
+pnpm run build   # equivalent to pnpm run prepare: tsc emits lib/types/*.d.ts, tsdown bundles lib/index.js
 pnpm test        # vitest unit tests
-pnpm run build   # tsc emits lib/types/*.d.ts, tsdown bundles lib/index.js
-pnpm pack        # produces jiamingzang-dsh-llm-qoder-<version>.tgz
+pnpm pack        # builds first, then produces jiamingzang-dsh-llm-qoder-<version>.tgz
 pnpm publish     # prepublishOnly builds first
 ```
 
-The build config is in place (`tsconfig.json` + `tsdown.config.ts`); peer dependencies `@deepseek-ai/dsh-llm` and `@deepseek-ai/cordis` stay external.
+The build config is in place (`tsconfig.json` + `tsdown.config.ts`); peer dependencies `@deepseek-ai/dsh-llm`, `@deepseek-ai/cordis`, and `@deepseek-ai/schemastery` stay external — the harness runtime supplies all three as shared packages, so they must not be installed into a profile.
 
-> **Version note**: the peer dependency `@deepseek-ai/dsh-llm@^0.1.0-rc.5` is now resolvable from the public npm registry (currently `0.1.0-rc.6`), so this repo can `pnpm install && pnpm run build` directly. To align exactly with the local version inside the DeepSeek Harness repo (`0.1.0-rc.5`), build inside `plugins/llm-qoder/` there instead (the repo-root `tsc` + `tsdown` produce `lib/`).
+> **Version note**: this plugin targets DeepSeek Harness **0.1.7-rc.2** (the desktop profile's current runtime). The peer range is `@deepseek-ai/dsh-llm@^0.1.7-rc.2`, compiled against the runtime sharedPackages versions `@deepseek-ai/cordis@4.0.4` + `@deepseek-ai/schemastery@3.18.4`. The 0.1.7 settings seam projects a plugin's `Config` form by profile entry id, so the plugin no longer registers a settings namespace and no longer depends on `@deepseek-ai/dsh-settings`.
 
 ## License
 
